@@ -251,7 +251,7 @@ function CheckoutPage() {
         address_1: form.street,
         city: form.city,
         postal_code: form.zip,
-        country_code: form.country,
+        country_code: form.country.toLowerCase(),
         phone: form.phone || undefined,
       };
 
@@ -848,15 +848,31 @@ function CheckoutPage() {
                               alt={item.product.name}
                               className="w-14 h-14 rounded-lg object-cover"
                             />
-                            <span className="absolute -top-1.5 -right-1.5 bg-olive-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full">
-                              {item.quantity}
-                            </span>
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm truncate">{item.product.name}</p>
                             <p className="text-xs text-muted-foreground">
                               {item.product.size}
                             </p>
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <button
+                                type="button"
+                                onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                                disabled={step === "processing"}
+                                className="w-5 h-5 flex items-center justify-center rounded border border-border text-xs hover:bg-cream transition-colors disabled:opacity-50"
+                              >
+                                −
+                              </button>
+                              <span className="text-xs min-w-[1.2rem] text-center">{item.quantity}</span>
+                              <button
+                                type="button"
+                                onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                                disabled={step === "processing"}
+                                className="w-5 h-5 flex items-center justify-center rounded border border-border text-xs hover:bg-cream transition-colors disabled:opacity-50"
+                              >
+                                +
+                              </button>
+                            </div>
                           </div>
                           <p className="text-sm shrink-0">
                             {(item.product.price * item.quantity)
@@ -896,30 +912,12 @@ function CheckoutPage() {
                       )}
                     </div>
 
-                    {/* Versandoptionen Auswahl */}
-                    {Array.isArray(shippingOptionsCacheRef.current[medusaCartId || ""]) && shippingOptionsCacheRef.current[medusaCartId || ""].length > 0 && (
-                      <div className="mb-2">
-                        <label className="block text-xs font-semibold mb-1">Versandoption wählen:</label>
-                        <div className="flex flex-col gap-1">
-                          {shippingOptionsCacheRef.current[medusaCartId || ""].map((opt: any) => {
-                            const isFree = opt.amount === 0;
-                            const isFreeAvailable = totalPrice >= FREE_SHIPPING_MIN;
-                            return (
-                              <label key={opt.id} className={`flex items-center gap-2 p-1 rounded ${selectedShippingId === opt.id ? 'bg-olive-50' : ''} ${isFree && !isFreeAvailable ? 'opacity-50' : ''}`}>
-                                <input
-                                  type="radio"
-                                  name="shippingOption"
-                                  value={opt.id}
-                                  checked={selectedShippingId === opt.id}
-                                  onChange={handleShippingChange}
-                                  disabled={isFree && !isFreeAvailable}
-                                />
-                                <span>{opt.name} – {(opt.amount / 100).toFixed(2).replace('.', ',')} €</span>
-                                {isFree && !isFreeAvailable && <span className="text-xs text-yellow-700">(ab {FREE_SHIPPING_MIN} €)</span>}
-                              </label>
-                            );
-                          })}
-                        </div>
+                    {/* Versandinfo (automatisch gewählt) */}
+                    {selectedShippingId && (
+                      <div className="mt-2">
+                        <p className="text-xs text-muted-foreground">
+                          {isPickup ? "Kostenlose Abholung vor Ort" : totalPrice >= FREE_SHIPPING_MIN ? "Kostenloser Versand ab 50 €" : "Standardversand"}
+                        </p>
                       </div>
                     )}
                     <div className="border-t border-border mt-4 pt-4">
