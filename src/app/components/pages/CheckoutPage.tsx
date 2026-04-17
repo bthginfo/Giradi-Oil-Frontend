@@ -132,6 +132,7 @@ function CheckoutPage() {
   const [paypalSessionId, setPaypalSessionId] = useState<string | null>(null);
   const [paypalCartId, setPaypalCartId] = useState<string | null>(null);
   const [appliedPromoCodes, setAppliedPromoCodes] = useState<string[]>([]);
+  const [discountTotal, setDiscountTotal] = useState(0);
 
   // Refs & Konstanten
   const shippingOptionsCacheRef = useRef<Record<string, any[]>>({});
@@ -176,7 +177,7 @@ function CheckoutPage() {
   };
 
   const finalShippingCost = calculateShipping();
-  const grandTotal = totalPrice + finalShippingCost;
+  const grandTotal = totalPrice + finalShippingCost - discountTotal;
 
   // Load shipping options and auto-select based on cart total & pickup
   useEffect(() => {
@@ -910,6 +911,12 @@ function CheckoutPage() {
                           )}
                         </span>
                       </div>
+                      {discountTotal > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-olive-500">Rabatt</span>
+                          <span className="text-olive-500">-{discountTotal.toFixed(2).replace(".", ",")} €</span>
+                        </div>
+                      )}
                       {!isPickup && backendShippingCost === null && totalPrice < 50 && (
                         <p className="text-xs text-muted-foreground">
                           Noch{" "}
@@ -956,7 +963,15 @@ function CheckoutPage() {
                       <PromotionCodeInput
                         cartId={medusaCartId}
                         onCartUpdate={async () => {
-                          // Optional: Cart neu laden, falls benötigt
+                          if (medusaCartId) {
+                            try {
+                              const { validateCart } = await import("../api/medusa-client");
+                              const cart = await validateCart(medusaCartId);
+                              if (cart) {
+                                setDiscountTotal(cart.discount_total || 0);
+                              }
+                            } catch (e) { console.warn("[Promo] Cart reload failed", e); }
+                          }
                         }}
                       />
                     </div>
