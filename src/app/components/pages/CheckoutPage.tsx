@@ -227,7 +227,7 @@ function CheckoutPage() {
     const options = shippingOptionsCacheRef.current[medusaCartId || ""] || [];
     const selected = options.find((opt: any) => opt.id === id);
     if (selected) {
-      const baseAmount = selected.amount / 100;
+      const baseAmount = selected.amount;
       // Nur berechnen wenn nicht kostenlos durch Mindestbestellwert
       if (totalPrice >= FREE_SHIPPING_MIN) {
         setShippingCost(0);
