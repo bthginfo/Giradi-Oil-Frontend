@@ -290,16 +290,7 @@ function CheckoutPage() {
         throw new Error("Zahlungssitzung konnte nicht initialisiert werden.");
       }
 
-      // 5. Authorize payment session (required before cart completion)
-      const authResult = await authorizePaymentSession(
-        paymentCollection.id,
-        paymentSession.id
-      );
-      if (!authResult) {
-        throw new Error("Zahlungssitzung konnte nicht autorisiert werden.");
-      }
-
-      // 6. Complete the cart → creates order
+      // 5. Complete the cart → creates order (backend handles payment authorization internally)
       setProcessingSubStep("completing");
       const order = await completeCart(cartId);
 

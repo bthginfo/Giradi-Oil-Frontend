@@ -361,7 +361,8 @@ export async function completeCart(
 ): Promise<MedusaOrder | null> {
   if (!IS_BACKEND_ENABLED) return null;
 
-  const url = `${STORE_API}/carts/${cartId}/complete`;
+  // Use custom complete-checkout endpoint which handles payment authorization internally
+  const url = `${STORE_API}/complete-checkout`;
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(MEDUSA_PUBLISHABLE_KEY
@@ -371,7 +372,11 @@ export async function completeCart(
 
   let res: Response;
   try {
-    res = await fetch(url, { method: "POST", headers });
+    res = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ cart_id: cartId }),
+    });
   } catch (err) {
     console.warn("[Medusa] completeCart network error:", err);
     return null;
@@ -394,18 +399,13 @@ export async function completeCart(
   }
 
   // 409 Conflict: cart was already completed (double-submit or race condition).
-  // Try to extract the order from the 409 response body first.
   if (res.status === 409) {
     clearStoredCartId();
-
-    // Medusa v2 sometimes includes the order in the 409 response
     const order409 = json?.order || json?.data;
     if (order409?.id) {
       console.log("[Medusa] 409 – extracted order from response:", order409.id);
       return order409 as MedusaOrder;
     }
-
-    // Fallback: return a marker so the UI can still navigate
     console.log("[Medusa] 409 – order already created, proceeding without order data");
     return {
       id: cartId,
