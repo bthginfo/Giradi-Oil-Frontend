@@ -16,7 +16,7 @@ export function PromotionCodeInput({ cartId, onCartUpdate }: PromotionCodeInputP
 
   const handleApply = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!cartId || !code.trim()) return;
+    if (!code.trim()) return;
     
     setStatus("loading");
     setMessage(null);
