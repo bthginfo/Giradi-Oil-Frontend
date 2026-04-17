@@ -12,7 +12,7 @@ const ImpressumPage = lazy(() => import("./components/pages/ImpressumPage").then
 const DatenschutzPage = lazy(() => import("./components/pages/DatenschutzPage").then((m) => ({ default: m.DatenschutzPage })));
 const AGBPage = lazy(() => import("./components/pages/AGBPage").then((m) => ({ default: m.AGBPage })));
 const WiderrufPage = lazy(() => import("./components/pages/WiderrufPage").then((m) => ({ default: m.WiderrufPage })));
-const CheckoutPage = lazy(() => import("./components/pages/CheckoutPage").then((m) => ({ default: m.CheckoutPage })));
+const CheckoutPage = lazy(() => import("./components/pages/CheckoutPage"));
 const OrderConfirmationPage = lazy(() => import("./components/pages/OrderConfirmationPage").then((m) => ({ default: m.OrderConfirmationPage })));
 const SetupGuidePage = lazy(() => import("./components/pages/SetupGuidePage").then((m) => ({ default: m.SetupGuidePage })));
 const NotFoundPage = lazy(() => import("./components/pages/NotFoundPage").then((m) => ({ default: m.NotFoundPage })));
