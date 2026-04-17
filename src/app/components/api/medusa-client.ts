@@ -301,10 +301,30 @@ export async function addPromoCode(
   cartId: string,
   promoCodes: string[]
 ): Promise<MedusaCart | null> {
-  const data = await medusaFetch<{ cart: MedusaCart }>(
-    `/carts/${cartId}/promotions`,
-    { method: "POST", body: JSON.stringify({ promo_codes: promoCodes }) }
-  );
+  if (!IS_BACKEND_ENABLED) return null;
+
+  const url = `${STORE_API}/carts/${cartId}/promotions`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(MEDUSA_PUBLISHABLE_KEY
+        ? { "x-publishable-api-key": MEDUSA_PUBLISHABLE_KEY }
+        : {}),
+    },
+    body: JSON.stringify({ promo_codes: promoCodes }),
+  });
+
+  if (!res.ok) {
+    let msg = "Code ungültig oder nicht anwendbar.";
+    try {
+      const err = await res.json();
+      if (err.message) msg = err.message;
+    } catch { /* ignore */ }
+    throw new Error(msg);
+  }
+
+  const data = await res.json();
   return data?.cart || null;
 }
 
