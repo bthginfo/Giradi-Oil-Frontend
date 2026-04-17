@@ -77,7 +77,7 @@ export function PromotionCodeInput({ cartId, onCartUpdate }: PromotionCodeInputP
 
   return (
     <div className="flex flex-col gap-3">
-      <form onSubmit={handleApply} className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2">
         <label className="text-sm font-medium text-muted-foreground">
           Promotion-Code eingeben
         </label>
@@ -86,12 +86,14 @@ export function PromotionCodeInput({ cartId, onCartUpdate }: PromotionCodeInputP
             type="text"
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleApply(e as any); } }}
             placeholder="z.B. TEST15"
             className="flex-1 px-3 py-2 rounded-lg border border-border bg-cream text-sm focus:outline-none focus:ring-2 focus:ring-olive-500/30 focus:border-olive-500 transition-colors min-w-0"
             disabled={status === "loading"}
           />
           <button
-            type="submit"
+            type="button"
+            onClick={handleApply as any}
             className={`bg-olive-500 text-white px-4 py-2 rounded-lg hover:bg-olive-600 transition-colors disabled:opacity-60 whitespace-nowrap w-full sm:w-auto ${
               status === "loading" ? "animate-pulse" : ""
             }`}
@@ -113,7 +115,7 @@ export function PromotionCodeInput({ cartId, onCartUpdate }: PromotionCodeInputP
             {message}
           </p>
         )}
-      </form>
+      </div>
 
       {/* Applied codes display */}
       {appliedCodes.length > 0 && (
