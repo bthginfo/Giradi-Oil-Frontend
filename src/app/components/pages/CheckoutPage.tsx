@@ -60,7 +60,9 @@ const availablePaymentMethods = [
   },
 ];
 
-// Type definition for PayPal components (for proper typing)
+import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
+
+// Type definition kept for reference
 interface PayPalButtonsProps {
   style?: { layout?: string; shape?: string; label?: string };
   createOrder: () => Promise<string>;
@@ -73,17 +75,6 @@ interface PayPalScriptProviderProps {
   options: { clientId: string; currency: string };
   children: React.ReactNode;
 }
-
-// Stub for PayPal components (will use dynamic import in real setup)
-const PayPalScriptProvider = ({ children }: PayPalScriptProviderProps) => <>{children}</>;
-const PayPalButtons = ({ onApprove, onCancel, onError, createOrder }: PayPalButtonsProps) => (
-  <button
-    onClick={() => createOrder().then(() => onApprove?.({})).catch((e) => onError?.(e))}
-    className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors"
-  >
-    Mit PayPal zahlen
-  </button>
-);
 
 function CheckoutPage() {
   const navigate = useNavigate();
@@ -368,28 +359,17 @@ function CheckoutPage() {
       const paymentSession = await initPaymentSession(paymentCollection.id, "pp_paypal_paypal");
       if (!paymentSession) throw new Error("PayPal-Sitzung konnte nicht erstellt werden.");
 
-      // 5. Extract PayPal approval URL from session data
-      const approvalUrl = (paymentSession.data as any)?.approval_url
-        || (paymentSession.data as any)?.links?.find((l: any) => l.rel === "approve")?.href;
+      // 5. Use PayPal Order ID for inline approval via PayPal JS SDK buttons
       const ppOrderId = (paymentSession.data as any)?.id;
 
-      if (approvalUrl) {
-        // Save state for when user returns from PayPal
-        setPaypalOrderId(ppOrderId || null);
-        setPaypalCollectionId(paymentCollection.id);
-        setPaypalSessionId(paymentSession.id);
-        setPaypalCartId(cartId);
-        // Redirect to PayPal
-        window.location.href = approvalUrl;
-      } else if (ppOrderId) {
-        // No redirect URL but have order ID – show inline PayPal buttons
+      if (ppOrderId) {
         setPaypalOrderId(ppOrderId);
         setPaypalCollectionId(paymentCollection.id);
         setPaypalSessionId(paymentSession.id);
         setPaypalCartId(cartId);
         setStep("paypal-approve");
       } else {
-        throw new Error("PayPal-Sitzung enthält keine Weiterleitungs-URL.");
+        throw new Error("PayPal-Sitzung enthält keine Order-ID.");
       }
     } catch (err: any) {
       setStep("error");
