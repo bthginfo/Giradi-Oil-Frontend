@@ -319,7 +319,7 @@ function CheckoutPage() {
       });
       cartOpRef.current = p;
       prefetchingRef.current = p;
-    }, 1500);
+    }, 800);
     prefetchTimerRef.current = timer;
     return () => { clearTimeout(timer); prefetchTimerRef.current = null; };
   }, [form.email, form.firstName, form.lastName, form.street, form.zip, form.city, form.country, isPickup, selectedShippingId, medusaCartId, step]);
@@ -330,9 +330,20 @@ function CheckoutPage() {
     if (!IS_BACKEND_ENABLED || !medusaCartId || payment !== "paypal" || paypalPrefetchedRef.current) return;
     if (!payColIdRef.current || !cartPreparedFlag || paypalOrderId) return;
     paypalPrefetchedRef.current = true;
+    console.log("[Prefetch] Starting PayPal session creation...");
     cartOpRef.current = cartOpRef.current.then(async () => {
       try {
-        const ps = await initPaymentSession(payColIdRef.current!, "pp_paypal_paypal");
+        // Try with existing payment collection
+        let ps = await initPaymentSession(payColIdRef.current!, "pp_paypal_paypal");
+        // If failed (404 = stale collection), create fresh collection and retry
+        if (!ps && medusaCartId) {
+          console.log("[Prefetch] PayPal session failed, refreshing payment collection");
+          const freshPc = await createPaymentCollection(medusaCartId);
+          if (freshPc) {
+            payColIdRef.current = freshPc.id;
+            ps = await initPaymentSession(freshPc.id, "pp_paypal_paypal");
+          }
+        }
         if (ps) {
           const ppOid = (ps.data as any)?.id;
           if (ppOid) {
