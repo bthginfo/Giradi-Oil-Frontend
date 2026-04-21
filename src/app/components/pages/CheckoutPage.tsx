@@ -273,12 +273,14 @@ function CheckoutPage() {
           country_code: "at",
           phone: form.phone || undefined,
         };
-        await updateCart(medusaCartId, {
+        const updatedCart = await updateCart(medusaCartId, {
           email: form.email,
           shipping_address: isPickup ? pickupAddress : address,
           billing_address: isPickup ? pickupAddress : address,
         });
-        if (selectedShippingId) {
+        // Only add shipping if cart doesn't already have one
+        const hasShipping = updatedCart?.shipping_methods?.length ?? 0;
+        if (selectedShippingId && !hasShipping) {
           await addShippingMethod(medusaCartId, selectedShippingId);
         }
         cartPreparedRef.current = key;
@@ -414,7 +416,7 @@ function CheckoutPage() {
         });
         if (!updatedCart) throw new Error("Warenkorb konnte nicht aktualisiert werden.");
 
-        if (selectedShippingId) {
+        if (selectedShippingId && !(updatedCart.shipping_methods?.length)) {
           const shippedCart = await addShippingMethod(cartId, selectedShippingId);
           if (!shippedCart) throw new Error("Versandoption konnte nicht hinzugefügt werden.");
         }
