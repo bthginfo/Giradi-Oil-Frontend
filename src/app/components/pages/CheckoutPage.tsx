@@ -293,10 +293,14 @@ function CheckoutPage() {
           shipping_address: isPickup ? pickupAddress : address,
           billing_address: isPickup ? pickupAddress : address,
         });
-        // Only add shipping if cart has a different option
+        // Only add shipping if cart doesn't already have the right option
         const currentShippingOptionId = updatedCart?.shipping_methods?.[0]?.shipping_option_id;
-        if (selectedShippingId && currentShippingOptionId !== selectedShippingId) {
-          await addShippingMethod(medusaCartId, selectedShippingId);
+        if (selectedShippingId && (!currentShippingOptionId || currentShippingOptionId !== selectedShippingId)) {
+          try {
+            await addShippingMethod(medusaCartId, selectedShippingId);
+          } catch (e) {
+            console.log("[Prefetch] addShippingMethod failed (may already exist)");
+          }
         }
         cartPreparedRef.current = key;
         console.log("[Prefetch] Cart updated + shipping added in background");
