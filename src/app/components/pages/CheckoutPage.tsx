@@ -386,13 +386,7 @@ function CheckoutPage() {
       setProcessingSubStep("completing");
       setCheckoutError(null);
 
-      // 1. Authorize the payment session at Medusa
-      const authResult = await authorizePaymentSession(paypalCollectionId, paypalSessionId);
-      if (!authResult) {
-        throw new Error("PayPal-Zahlung konnte nicht autorisiert werden.");
-      }
-
-      // 2. Complete the cart → creates order
+      // Complete the cart → backend handles authorization + order creation internally
       const order = await completeCart(paypalCartId);
 
       if (order) {
