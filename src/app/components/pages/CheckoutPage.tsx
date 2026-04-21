@@ -238,16 +238,30 @@ function CheckoutPage() {
 
   // Prefetch: create payment collection as soon as checkout loads
   const prefetchedPayColRef = useRef<boolean>(false);
+  const payColIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (!IS_BACKEND_ENABLED || !medusaCartId || prefetchedPayColRef.current) return;
     prefetchedPayColRef.current = true;
     // Queue behind any existing operation
     cartOpRef.current = cartOpRef.current.then(() =>
       createPaymentCollection(medusaCartId).then((pc) => {
-        if (pc) console.log("[Prefetch] Payment collection ready:", pc.id);
+        if (pc) { payColIdRef.current = pc.id; console.log("[Prefetch] Payment collection ready:", pc.id); }
       }).catch(() => {})
     );
   }, [medusaCartId]);
+
+  // Preload PayPal SDK as soon as PayPal is selected
+  useEffect(() => {
+    if (payment !== "paypal" || !PAYPAL_CLIENT_ID) return;
+    const scriptId = "paypal-sdk-preload";
+    if (document.getElementById(scriptId)) return;
+    const link = document.createElement("link");
+    link.id = scriptId;
+    link.rel = "preload";
+    link.as = "script";
+    link.href = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=EUR`;
+    document.head.appendChild(link);
+  }, [payment]);
 
   // Prefetch: update cart + add shipping in background when form is filled
   const cartPreparedRef = useRef<string>("");
@@ -460,12 +474,16 @@ function CheckoutPage() {
         }
       }
 
-      // Payment collection was prefetched — just create it if somehow missing
-      const paymentCollection = await createPaymentCollection(cartId);
-      if (!paymentCollection) throw new Error("Zahlungssammlung konnte nicht erstellt werden.");
+      // Reuse prefetched payment collection, only create if missing
+      let pcId = payColIdRef.current;
+      if (!pcId) {
+        const paymentCollection = await createPaymentCollection(cartId);
+        if (!paymentCollection) throw new Error("Zahlungssammlung konnte nicht erstellt werden.");
+        pcId = paymentCollection.id;
+      }
 
       // 4. Init PayPal payment session
-      const paymentSession = await initPaymentSession(paymentCollection.id, "pp_paypal_paypal");
+      const paymentSession = await initPaymentSession(pcId, "pp_paypal_paypal");
       if (!paymentSession) throw new Error("PayPal-Sitzung konnte nicht erstellt werden.");
 
       // 5. Use PayPal Order ID for inline approval via PayPal JS SDK buttons
@@ -473,7 +491,7 @@ function CheckoutPage() {
 
       if (ppOrderId) {
         setPaypalOrderId(ppOrderId);
-        setPaypalCollectionId(paymentCollection.id);
+        setPaypalCollectionId(pcId);
         setPaypalSessionId(paymentSession.id);
         setPaypalCartId(cartId);
         setStep("paypal-approve");
