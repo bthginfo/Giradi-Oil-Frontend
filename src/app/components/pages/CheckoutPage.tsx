@@ -112,7 +112,9 @@ function CheckoutPage() {
     notes: "",
   });
   const [errors, setErrors] = useState<any>({});
-  const [isPickup, setIsPickup] = useState(false);
+  const [deliveryMethod, setDeliveryMethod] = useState<"shipping" | "pickup">("shipping");
+  // isPickup is derived: "bar" always pickup, otherwise user choice
+  const isPickup = payment === "bar" || deliveryMethod === "pickup";
   const [payment, setPayment] = useState("vorkasse");
   const [showSummary, setShowSummary] = useState(false);
   const [selectedShippingId, setSelectedShippingId] = useState<string | null>(null);
@@ -356,6 +358,7 @@ function CheckoutPage() {
           order_id: (order as any)._was409 ? undefined : order.id,
           email: form.email,
           payment_method: payment,
+          is_pickup: isPickup,
           _was409: (order as any)._was409,
         }).catch((e) => console.warn("[Email] Failed:", e));
 
@@ -482,6 +485,7 @@ function CheckoutPage() {
           order_id: was409 ? undefined : order.id,
           email: form.email,
           payment_method: "paypal",
+          is_pickup: isPickup,
           _was409: was409,
         }).catch((e) => console.warn("[Email] Failed:", e));
         clearCart();
@@ -817,6 +821,44 @@ function CheckoutPage() {
                 )}
               </section>
 
+              {/* Delivery Method */}
+              {payment !== "bar" && (
+                <section className="bg-white rounded-xl p-6 shadow-sm">
+                  <h2 className="text-lg mb-4" style={{ fontFamily: "var(--font-heading)" }}>
+                    Versandart
+                  </h2>
+                  <div className="space-y-3">
+                    {[
+                      { id: "shipping" as const, label: "Versand", desc: totalPrice >= FREE_SHIPPING_MIN ? "Kostenloser Versand (ab 50 €)" : `Standardversand (${shippingCost.toFixed(2).replace(".", ",")} €)`, icon: Truck },
+                      { id: "pickup" as const, label: "Abholung vor Ort", desc: "Kostenlose Abholung", icon: Store },
+                    ].map((dm) => {
+                      const Icon = dm.icon;
+                      const isActive = deliveryMethod === dm.id;
+                      return (
+                        <label
+                          key={dm.id}
+                          className={`flex items-center gap-4 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                            isActive ? "border-olive-500 bg-olive-50" : "border-border hover:border-olive-300"
+                          } ${step === "processing" ? "opacity-50 pointer-events-none" : ""}`}
+                        >
+                          <input type="radio" name="delivery" value={dm.id} checked={isActive}
+                            onChange={() => setDeliveryMethod(dm.id)}
+                            disabled={step === "processing"} className="sr-only" />
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${isActive ? "border-olive-500" : "border-border"}`}>
+                            {isActive && <div className="w-2.5 h-2.5 rounded-full bg-olive-500" />}
+                          </div>
+                          <Icon className={`w-5 h-5 shrink-0 ${isActive ? "text-olive-500" : "text-muted-foreground"}`} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm">{dm.label}</p>
+                            <p className="text-xs text-muted-foreground">{dm.desc}</p>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+
               {/* Payment */}
               <section className="bg-white rounded-xl p-6 shadow-sm">
                 <h2
@@ -845,7 +887,7 @@ function CheckoutPage() {
                           checked={isActive}
                           onChange={() => {
                             setPayment(pm.id);
-                            setIsPickup(pm.id === "bar");
+                            if (pm.id === "bar") setDeliveryMethod("pickup");
                           }}
                           disabled={step === "processing"}
                           className="sr-only"

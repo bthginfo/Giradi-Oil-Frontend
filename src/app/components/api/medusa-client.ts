@@ -556,6 +556,7 @@ export async function sendOrderConfirmation(params: {
   order_id?: string;
   email?: string;
   payment_method?: string;
+  is_pickup?: boolean;
   _was409?: boolean;
 }): Promise<boolean> {
   if (!IS_BACKEND_ENABLED) return false;
@@ -574,10 +575,11 @@ export async function sendOrderConfirmation(params: {
   }
 
   // Don't send _was409 to the backend
-  const body: Record<string, string> = {};
+  const body: Record<string, any> = {};
   if (params.order_id) body.order_id = params.order_id;
   if (params.email) body.email = params.email;
   if (params.payment_method) body.payment_method = params.payment_method;
+  if (params.is_pickup !== undefined) body.is_pickup = params.is_pickup;
 
   try {
     const res = await fetch(`${STORE_API}/send-confirmation`, {
