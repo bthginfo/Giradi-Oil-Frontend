@@ -133,6 +133,28 @@ function CheckoutPage() {
     { key: "processing", label: "Bestellung wird verarbeitet…" },
   ];
 
+  // Fun rotating messages for the loading animation
+  const LOADING_MESSAGES = [
+    "Bestellung wird angelegt…",
+    "Oliven werden gepresst… 🫒",
+    "Öl wird abgefüllt…",
+    "Etikett wird aufgeklebt…",
+    "Paket wird geschnürt… 📦",
+    "Qualitätskontrolle läuft…",
+    "Lieferadresse wird geprüft…",
+    "Fast geschafft…",
+  ];
+  const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
+
+  useEffect(() => {
+    if (step !== "processing") return;
+    setLoadingMsgIdx(0);
+    const interval = setInterval(() => {
+      setLoadingMsgIdx((prev) => (prev + 1) % LOADING_MESSAGES.length);
+    }, 2200);
+    return () => clearInterval(interval);
+  }, [step]);
+
   // --- Hilfsfunktionen & Handler ---
 
   // updateField für Formularfelder
@@ -208,6 +230,16 @@ function CheckoutPage() {
 
     loadShippingOptions();
   }, [medusaCartId, isPickup, totalPrice]);
+
+  // Prefetch: create payment collection as soon as checkout loads
+  const prefetchedPayColRef = useRef<boolean>(false);
+  useEffect(() => {
+    if (!IS_BACKEND_ENABLED || !medusaCartId || prefetchedPayColRef.current) return;
+    prefetchedPayColRef.current = true;
+    createPaymentCollection(medusaCartId).then((pc) => {
+      if (pc) console.log("[Prefetch] Payment collection ready:", pc.id);
+    }).catch(() => {});
+  }, [medusaCartId]);
 
   // Versandoptionen-Handler
   const handleShippingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1058,44 +1090,53 @@ function CheckoutPage() {
                   </button>
                   )}
 
-                  {/* Processing progress steps */}
+                  {/* Processing olive animation */}
                   {step === "processing" && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}
-                      className="mt-3 bg-olive-50 rounded-lg p-3"
+                      className="mt-4 bg-olive-50 rounded-xl p-6 flex flex-col items-center"
                     >
-                      <div className="space-y-1.5">
-                        {PROCESSING_STEPS.map((ps, idx) => {
-                          const currentIdx = PROCESSING_STEPS.findIndex(
-                            (s) => s.key === processingSubStep
-                          );
-                          const isDone = idx < currentIdx;
-                          const isActive = idx === currentIdx;
-                          return (
-                            <div
-                              key={ps.key}
-                              className={`flex items-center gap-2 text-xs transition-colors ${
-                                isDone
-                                  ? "text-olive-600"
-                                  : isActive
-                                  ? "text-olive-700"
-                                  : "text-olive-400"
-                              }`}
-                            >
-                              {isDone ? (
-                                <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 16 16" fill="currentColor">
-                                  <path d="M8 0a8 8 0 110 16A8 8 0 018 0zm3.78 5.22a.75.75 0 00-1.06 0L7 8.94 5.28 7.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.06 0l4.25-4.25a.75.75 0 000-1.06z" />
-                                </svg>
-                              ) : isActive ? (
-                                <Loader2 className="w-3.5 h-3.5 shrink-0 animate-spin" />
-                              ) : (
-                                <div className="w-3.5 h-3.5 shrink-0 rounded-full border border-current" />
-                              )}
-                              <span>{ps.label}</span>
-                            </div>
-                          );
-                        })}
+                      {/* Olive dropping into cart animation */}
+                      <div className="relative w-20 h-20 mb-4">
+                        {/* Cart */}
+                        <motion.div className="absolute bottom-0 left-1/2 -translate-x-1/2 text-3xl">
+                          🛒
+                        </motion.div>
+                        {/* Bouncing olive */}
+                        <motion.div
+                          className="absolute left-1/2 -translate-x-1/2 text-2xl"
+                          animate={{
+                            y: [0, 40, 30, 40],
+                            opacity: [1, 1, 1, 0.6],
+                          }}
+                          transition={{
+                            duration: 1.6,
+                            repeat: Infinity,
+                            ease: "easeInOut",
+                          }}
+                        >
+                          🫒
+                        </motion.div>
+                      </div>
+                      {/* Rotating fun messages */}
+                      <motion.p
+                        key={loadingMsgIdx}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        className="text-sm text-olive-700 font-medium text-center"
+                      >
+                        {LOADING_MESSAGES[loadingMsgIdx]}
+                      </motion.p>
+                      {/* Progress bar */}
+                      <div className="w-full mt-3 h-1.5 bg-olive-200 rounded-full overflow-hidden">
+                        <motion.div
+                          className="h-full bg-olive-500 rounded-full"
+                          initial={{ width: "5%" }}
+                          animate={{ width: "90%" }}
+                          transition={{ duration: 15, ease: "easeOut" }}
+                        />
                       </div>
                     </motion.div>
                   )}
