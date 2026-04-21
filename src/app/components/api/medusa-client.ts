@@ -418,6 +418,7 @@ export async function completeCart(
 
   // Success: 200 OK
   if (res.ok && json) {
+    if (json._timings) console.log("[Checkout Timings]", json._timings);
     const order = json.order || json.data;
     if (order?.id) {
       clearStoredCartId();
