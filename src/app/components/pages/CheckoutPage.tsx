@@ -121,6 +121,7 @@ function CheckoutPage() {
   const [shippingCost, setShippingCost] = useState(0);
   const [backendShippingCost, setBackendShippingCost] = useState<number | null>(null);
   const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
+  const [cartPreparedFlag, setCartPreparedFlag] = useState(false);
   const [paypalCollectionId, setPaypalCollectionId] = useState<string | null>(null);
   const [paypalSessionId, setPaypalSessionId] = useState<string | null>(null);
   const [paypalCartId, setPaypalCartId] = useState<string | null>(null);
@@ -303,6 +304,7 @@ function CheckoutPage() {
           }
         }
         cartPreparedRef.current = key;
+        setCartPreparedFlag(true);
         console.log("[Prefetch] Cart updated + shipping added in background");
       } catch (e) {
         // Silent fail - will retry on submit
@@ -321,7 +323,7 @@ function CheckoutPage() {
   const paypalPrefetchedRef = useRef<boolean>(false);
   useEffect(() => {
     if (!IS_BACKEND_ENABLED || !medusaCartId || payment !== "paypal" || paypalPrefetchedRef.current) return;
-    if (!payColIdRef.current || !cartPreparedRef.current || paypalOrderId) return;
+    if (!payColIdRef.current || !cartPreparedFlag || paypalOrderId) return;
     paypalPrefetchedRef.current = true;
     cartOpRef.current = cartOpRef.current.then(async () => {
       try {
@@ -341,7 +343,7 @@ function CheckoutPage() {
         paypalPrefetchedRef.current = false;
       }
     });
-  }, [payment, medusaCartId, paypalOrderId]);
+  }, [payment, medusaCartId, paypalOrderId, cartPreparedFlag]);
 
   // Versandoptionen-Handler
   const handleShippingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
