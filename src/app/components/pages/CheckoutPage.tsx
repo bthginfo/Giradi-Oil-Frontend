@@ -203,8 +203,8 @@ function CheckoutPage() {
           
           // Auto-select shipping: Backend sends amount already in EUR (e.g. 5.9 = 5,90€)
           // Find free shipping and standard shipping options
-          const freeOption = options.find((o: any) => o.amount === 0 || o.name?.toLowerCase().includes("kostenlos") || o.name?.toLowerCase().includes("free"));
           const pickupOption = options.find((o: any) => o.name?.toLowerCase().includes("abhol") || o.name?.toLowerCase().includes("pickup"));
+          const freeOption = options.find((o: any) => (o.amount === 0 || o.name?.toLowerCase().includes("kostenlos") || o.name?.toLowerCase().includes("free")) && o.id !== pickupOption?.id);
           const standardOption = options.find((o: any) => o.amount > 0 && !o.name?.toLowerCase().includes("abhol"));
 
           if (isPickup && pickupOption) {
@@ -250,18 +250,7 @@ function CheckoutPage() {
     );
   }, [medusaCartId]);
 
-  // Preload PayPal SDK as soon as PayPal is selected
-  useEffect(() => {
-    if (payment !== "paypal" || !PAYPAL_CLIENT_ID) return;
-    const scriptId = "paypal-sdk-preload";
-    if (document.getElementById(scriptId)) return;
-    const link = document.createElement("link");
-    link.id = scriptId;
-    link.rel = "preload";
-    link.as = "script";
-    link.href = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=EUR`;
-    document.head.appendChild(link);
-  }, [payment]);
+  // PayPal SDK is preloaded via PayPalScriptProvider when payment === "paypal"
 
   // Prefetch: update cart + add shipping in background when form is filled
   const cartPreparedRef = useRef<string>("");
@@ -544,6 +533,14 @@ function CheckoutPage() {
           },
         });
       } else {
+        // Still try to send confirmation (admin needs notification)
+        sendOrderConfirmation({
+          email: form.email,
+          payment_method: "paypal",
+          is_pickup: isPickup,
+          billing_address: { first_name: form.firstName, last_name: form.lastName, address_1: form.street, postal_code: form.zip, city: form.city, country_code: form.country.toLowerCase() },
+          _was409: true,
+        }).catch((e) => console.warn("[Email] Failed:", e));
         clearCart();
         navigate("/bestellung-bestaetigt", {
           state: {
@@ -1189,41 +1186,45 @@ function CheckoutPage() {
 
                 {/* Submit */}
                 <div className="p-5 border-t border-border">
-                  {step === "paypal-approve" && paypalOrderId && PAYPAL_CLIENT_ID ? (
-                    <div className="space-y-3">
-                      <p className="text-sm text-center text-muted-foreground mb-2">
-                        Bitte bestätige die Zahlung über PayPal:
-                      </p>
-                      <PayPalScriptProvider options={{ clientId: PAYPAL_CLIENT_ID, currency: "EUR" }}>
-                        <PayPalButtons
-                          style={{ layout: "vertical", shape: "rect", label: "pay" }}
-                          createOrder={() => Promise.resolve(paypalOrderId || "")}
-                          onApprove={async () => {
-                            await handlePayPalApprove();
-                          }}
-                          onCancel={() => {
-                            setStep("form");
-                            setCheckoutError("PayPal-Zahlung wurde abgebrochen.");
-                          }}
-                          onError={(err) => {
-                            console.error("PayPal Error:", err);
-                            setStep("error");
-                            setCheckoutError("PayPal-Zahlung fehlgeschlagen. Bitte versuche es erneut.");
-                          }}
-                        />
-                      </PayPalScriptProvider>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setStep("form");
-                          setPaypalOrderId(null);
-                        }}
-                        className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        Zurück zur Zahlungsauswahl
-                      </button>
-                    </div>
-                  ) : (
+                  {/* Pre-mount PayPal SDK provider when PayPal is selected */}
+                  {payment === "paypal" && PAYPAL_CLIENT_ID && (
+                    <PayPalScriptProvider options={{ clientId: PAYPAL_CLIENT_ID, currency: "EUR", intent: "authorize" }}>
+                      {step === "paypal-approve" && paypalOrderId ? (
+                        <div className="space-y-3">
+                          <p className="text-sm text-center text-muted-foreground mb-2">
+                            Bitte bestätige die Zahlung über PayPal:
+                          </p>
+                          <PayPalButtons
+                            style={{ layout: "vertical", shape: "rect", label: "pay" }}
+                            createOrder={() => Promise.resolve(paypalOrderId || "")}
+                            onApprove={async () => {
+                              await handlePayPalApprove();
+                            }}
+                            onCancel={() => {
+                              setStep("form");
+                              setCheckoutError("PayPal-Zahlung wurde abgebrochen.");
+                            }}
+                            onError={(err) => {
+                              console.error("PayPal Error:", err);
+                              setStep("error");
+                              setCheckoutError("PayPal-Zahlung fehlgeschlagen. Bitte versuche es erneut.");
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setStep("form");
+                              setPaypalOrderId(null);
+                            }}
+                            className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            Zurück zur Zahlungsauswahl
+                          </button>
+                        </div>
+                      ) : null}
+                    </PayPalScriptProvider>
+                  )}
+                  {!(step === "paypal-approve" && paypalOrderId && PAYPAL_CLIENT_ID) && (
                   <button
                     type="submit"
                     disabled={step === "processing" || syncing || isSubmitting}
