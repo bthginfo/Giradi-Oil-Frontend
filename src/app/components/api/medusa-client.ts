@@ -493,7 +493,14 @@ export async function fetchPaymentProviders(
 export async function createPaymentCollection(
   cartId: string
 ): Promise<{ id: string } | null> {
-  // Try creating
+  // First check if cart already has a payment collection
+  try {
+    const cartData = await medusaFetch<{ cart: { payment_collection?: { id: string } } }>(
+      `/carts/${cartId}?fields=payment_collection.id`
+    );
+    if (cartData?.cart?.payment_collection?.id) return cartData.cart.payment_collection as { id: string };
+  } catch (_) {}
+  // Create new
   const data = await medusaFetch<{
     payment_collection: { id: string; payment_sessions?: unknown[] };
   }>(`/payment-collections`, {
@@ -501,9 +508,6 @@ export async function createPaymentCollection(
     body: JSON.stringify({ cart_id: cartId }),
   });
   if (data?.payment_collection?.id) return data.payment_collection;
-  // If 500 (already exists), fetch from cart
-  const cartData = await medusaFetch<{ cart: { payment_collection?: { id: string } } }>(`/carts/${cartId}`);
-  if (cartData?.cart?.payment_collection?.id) return cartData.cart.payment_collection as { id: string };
   return null;
 }
 

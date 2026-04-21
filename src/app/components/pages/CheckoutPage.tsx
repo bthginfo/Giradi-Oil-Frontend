@@ -308,10 +308,36 @@ function CheckoutPage() {
       });
       cartOpRef.current = p;
       prefetchingRef.current = p;
-    }, 2500);
+    }, 1500);
     prefetchTimerRef.current = timer;
     return () => { clearTimeout(timer); prefetchTimerRef.current = null; };
   }, [form.email, form.firstName, form.lastName, form.street, form.zip, form.city, form.country, isPickup, selectedShippingId, medusaCartId, step]);
+
+  // Prefetch: create PayPal session as soon as cart is prepared + PayPal selected
+  const paypalPrefetchedRef = useRef<boolean>(false);
+  useEffect(() => {
+    if (!IS_BACKEND_ENABLED || !medusaCartId || payment !== "paypal" || paypalPrefetchedRef.current) return;
+    if (!payColIdRef.current || !cartPreparedRef.current || paypalOrderId) return;
+    paypalPrefetchedRef.current = true;
+    cartOpRef.current = cartOpRef.current.then(async () => {
+      try {
+        const ps = await initPaymentSession(payColIdRef.current!, "pp_paypal_paypal");
+        if (ps) {
+          const ppOid = (ps.data as any)?.id;
+          if (ppOid) {
+            setPaypalOrderId(ppOid);
+            setPaypalCollectionId(payColIdRef.current!);
+            setPaypalSessionId(ps.id);
+            setPaypalCartId(medusaCartId);
+            console.log("[Prefetch] PayPal session ready:", ppOid);
+          }
+        }
+      } catch (e) {
+        console.log("[Prefetch] PayPal session prefetch failed");
+        paypalPrefetchedRef.current = false;
+      }
+    });
+  }, [payment, medusaCartId, paypalOrderId]);
 
   // Versandoptionen-Handler
   const handleShippingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -462,6 +488,13 @@ function CheckoutPage() {
           const shippedCart = await addShippingMethod(cartId, selectedShippingId);
           if (!shippedCart) throw new Error("Versandoption konnte nicht hinzugefügt werden.");
         }
+      }
+
+      // If PayPal session was already prefetched, skip directly to approval
+      if (paypalOrderId && paypalCollectionId && paypalSessionId && paypalCartId) {
+        console.log("[PayPal] Reusing prefetched session:", paypalOrderId);
+        setStep("paypal-approve");
+        return;
       }
 
       // Reuse prefetched payment collection, only create if missing
