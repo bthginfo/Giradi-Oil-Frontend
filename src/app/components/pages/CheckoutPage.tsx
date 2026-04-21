@@ -469,10 +469,10 @@ function CheckoutPage() {
       setStep("processing");
       setProcessingSubStep("processing");
 
-      // Cancel pending prefetch timer and wait for in-flight prefetch (max 3s)
+      // Cancel pending prefetch timer and wait for in-flight prefetch (max 1s)
       if (prefetchTimerRef.current) { clearTimeout(prefetchTimerRef.current); prefetchTimerRef.current = null; }
       if (prefetchingRef.current) {
-        await Promise.race([prefetchingRef.current, new Promise(r => setTimeout(r, 3000))]);
+        await Promise.race([prefetchingRef.current, new Promise(r => setTimeout(r, 1000))]);
         prefetchingRef.current = null;
       }
 
@@ -508,16 +508,19 @@ function CheckoutPage() {
         return;
       }
 
-      // Reuse prefetched payment collection, only create if missing
+      // Get or create payment collection (try cached, fallback to fresh)
       let pcId = payColIdRef.current;
-      if (!pcId) {
+      let paymentSession = pcId ? await initPaymentSession(pcId, "pp_paypal_paypal") : null;
+      
+      // If cached collection failed, create fresh
+      if (!paymentSession) {
+        console.log("[PayPal] Cached payment collection failed, creating fresh");
         const paymentCollection = await createPaymentCollection(cartId);
         if (!paymentCollection) throw new Error("Zahlungssammlung konnte nicht erstellt werden.");
         pcId = paymentCollection.id;
+        payColIdRef.current = pcId;
+        paymentSession = await initPaymentSession(pcId, "pp_paypal_paypal");
       }
-
-      // 4. Init PayPal payment session
-      const paymentSession = await initPaymentSession(pcId, "pp_paypal_paypal");
       if (!paymentSession) throw new Error("PayPal-Sitzung konnte nicht erstellt werden.");
 
       // 5. Use PayPal Order ID for inline approval via PayPal JS SDK buttons
