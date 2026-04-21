@@ -810,11 +810,11 @@ function CheckoutPage() {
                       <strong>Bankverbindung:</strong>
                     </p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Monika Girardi & Mitgesellschafter
+                      Girardi M.u.Mitges.
                       <br />
-                      IBAN: AT00 0000 0000 0000 0000
+                      IBAN: AT57 3600 0000 0421 8830
                       <br />
-                      BIC: XXXXATAXX
+                      BIC: RZTIAT22
                       <br />
                       Verwendungszweck: Ihre Bestellnummer
                     </p>
