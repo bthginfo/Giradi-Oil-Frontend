@@ -243,6 +243,8 @@ function CheckoutPage() {
 
   // Prefetch: update cart + add shipping in background when form is filled
   const cartPreparedRef = useRef<string>("");
+  const prefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prefetchingRef = useRef<Promise<void> | null>(null);
   useEffect(() => {
     if (!IS_BACKEND_ENABLED || !medusaCartId || step !== "form") return;
     // Only when required fields are filled
@@ -253,7 +255,8 @@ function CheckoutPage() {
     const key = `${form.email}|${form.firstName}|${form.lastName}|${form.street}|${form.zip}|${form.city}|${form.country}|${isPickup}|${selectedShippingId}`;
     if (cartPreparedRef.current === key) return;
 
-    const timer = setTimeout(async () => {
+    const timer = setTimeout(() => {
+      const p = (async () => {
       try {
         const address = {
           first_name: form.firstName,
@@ -287,9 +290,14 @@ function CheckoutPage() {
         console.log("[Prefetch] Cart updated + shipping added in background");
       } catch (e) {
         // Silent fail - will retry on submit
+      } finally {
+        prefetchingRef.current = null;
       }
+      })();
+      prefetchingRef.current = p;
     }, 1500);
-    return () => clearTimeout(timer);
+    prefetchTimerRef.current = timer;
+    return () => { clearTimeout(timer); prefetchTimerRef.current = null; };
   }, [form.email, form.firstName, form.lastName, form.street, form.zip, form.city, form.country, isPickup, selectedShippingId, medusaCartId, step]);
 
   // Versandoptionen-Handler
@@ -314,6 +322,10 @@ function CheckoutPage() {
     try {
       setStep("processing");
       setProcessingSubStep("processing");
+
+      // Cancel pending prefetch timer and wait for in-flight prefetch
+      if (prefetchTimerRef.current) { clearTimeout(prefetchTimerRef.current); prefetchTimerRef.current = null; }
+      if (prefetchingRef.current) { await prefetchingRef.current; }
 
       const isPrepared = !!cartPreparedRef.current;
 
@@ -396,6 +408,10 @@ function CheckoutPage() {
     try {
       setStep("processing");
       setProcessingSubStep("processing");
+
+      // Cancel pending prefetch timer and wait for in-flight prefetch
+      if (prefetchTimerRef.current) { clearTimeout(prefetchTimerRef.current); prefetchTimerRef.current = null; }
+      if (prefetchingRef.current) { await prefetchingRef.current; }
 
       // If cart wasn't prefetch-updated, do it now
       if (!cartPreparedRef.current) {
