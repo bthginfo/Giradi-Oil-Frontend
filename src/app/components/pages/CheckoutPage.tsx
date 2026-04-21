@@ -1188,7 +1188,7 @@ function CheckoutPage() {
                 <div className="p-5 border-t border-border">
                   {/* Pre-mount PayPal SDK provider when PayPal is selected */}
                   {payment === "paypal" && PAYPAL_CLIENT_ID && (
-                    <PayPalScriptProvider options={{ clientId: PAYPAL_CLIENT_ID, currency: "EUR", intent: "authorize" }}>
+                    <PayPalScriptProvider options={{ clientId: PAYPAL_CLIENT_ID, currency: "EUR", intent: "capture" }}>
                       {step === "paypal-approve" && paypalOrderId ? (
                         <div className="space-y-3">
                           <p className="text-sm text-center text-muted-foreground mb-2">
