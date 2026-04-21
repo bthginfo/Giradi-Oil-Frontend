@@ -130,10 +130,7 @@ function CheckoutPage() {
   const FREE_SHIPPING_MIN = 50;
   const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID || "";
   const PROCESSING_STEPS = [
-    { key: "creating", label: "Warenkorb wird erstellt" },
-    { key: "shipping", label: "Versandoption wird hinzugefügt" },
-    { key: "payment", label: "Zahlung wird vorbereitet" },
-    { key: "completing", label: "Bestellung wird abgeschlossen" },
+    { key: "processing", label: "Bestellung wird verarbeitet…" },
   ];
 
   // --- Hilfsfunktionen & Handler ---
@@ -233,7 +230,7 @@ function CheckoutPage() {
   const handleMedusaCheckout = async (cartId: string) => {
     try {
       setStep("processing");
-      setProcessingSubStep("creating");
+      setProcessingSubStep("processing");
 
       const address: MedusaAddress = {
         first_name: form.firstName,
@@ -246,7 +243,6 @@ function CheckoutPage() {
       };
 
       // Single API call handles everything: update cart, add shipping, payment, complete
-      setProcessingSubStep("completing");
       const order = await completeCart(cartId, {
         email: form.email,
         shipping_address: isPickup ? undefined : address,
@@ -312,7 +308,7 @@ function CheckoutPage() {
   const handlePayPalCheckout = async (cartId: string) => {
     try {
       setStep("processing");
-      setProcessingSubStep("creating");
+      setProcessingSubStep("processing");
 
       const address: MedusaAddress = {
         first_name: form.firstName,
@@ -339,7 +335,6 @@ function CheckoutPage() {
       }
 
       // 3. Create payment collection
-      setProcessingSubStep("payment");
       const paymentCollection = await createPaymentCollection(cartId);
       if (!paymentCollection) throw new Error("Zahlungssammlung konnte nicht erstellt werden.");
 
@@ -371,7 +366,7 @@ function CheckoutPage() {
 
     try {
       setStep("processing");
-      setProcessingSubStep("completing");
+      setProcessingSubStep("processing");
       setCheckoutError(null);
 
       // Complete the cart → backend handles authorization + order creation internally
